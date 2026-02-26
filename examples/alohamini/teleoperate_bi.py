@@ -7,6 +7,8 @@ from lerobot.robots.alohamini import LeKiwiClient, LeKiwiClientConfig
 from lerobot.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
 from lerobot.teleoperators.bi_so_leader import BiSOLeader, BiSOLeaderConfig
 from lerobot.teleoperators.so_leader import SOLeaderConfig
+from lerobot.teleoperators.bi_openarm_leader import BiOpenArmLeader, BiOpenArmLeaderConfig
+from lerobot.teleoperators.openarm_leader import OpenArmLeaderConfigBase
 from lerobot.utils.robot_utils import precise_sleep
 from lerobot.utils.visualization_utils import init_rerun, log_rerun_data
 
@@ -24,6 +26,24 @@ parser.add_argument(
     choices=["so-arm-5dof", "am-arm-6dof"],
     help="Arm profile selector used for both leader and follower consistency.",
 )
+parser.add_argument(
+    "--leader_type",
+    type=str,
+    default="feetech",
+    choices=["feetech", "damiao"],
+    help="Leader arm motor type: 'feetech' (serial, SO-ARM) or 'damiao' (CAN bus).",
+)
+# Damiao-specific options (only used when --leader_type damiao)
+parser.add_argument("--left_can", type=str, default="can0", help="CAN interface for left arm (damiao only)")
+parser.add_argument("--right_can", type=str, default="can1", help="CAN interface for right arm (damiao only)")
+parser.add_argument("--can_fd", action="store_true", default=True, help="Use CAN FD (damiao only)")
+parser.add_argument(
+    "--damiao_motor_type",
+    type=str,
+    default="dm4310",
+    choices=["dm4310", "dm4340", "dm8009"],
+    help="Damiao motor model (damiao only)",
+)
 
 args = parser.parse_args()
 
@@ -37,20 +57,60 @@ if NO_ROBOT:
 
 if NO_LEADER:
     print("🧪 NO_LEADER mode enabled: leader arm will not connect, only print actions.")
+
 # Create configs
 robot_config = LeKiwiClientConfig(remote_ip=args.remote_ip, id="my_alohamini")
-bi_cfg = BiSOLeaderConfig(
-    left_arm_config=SOLeaderConfig(
-        port="/dev/am_arm_leader_left",
-        arm_profile=args.arm_profile,
-    ),
-    right_arm_config=SOLeaderConfig(
-        port="/dev/am_arm_leader_right",
-        arm_profile=args.arm_profile,
-    ),
-    id=args.leader_id,
-)
-leader = BiSOLeader(bi_cfg)
+
+if args.leader_type == "damiao":
+    # Build motor config based on arm_profile
+    if args.arm_profile == "am-arm-6dof":
+        motor_cfg = {
+            "shoulder_pan":  (0x01, 0x11, args.damiao_motor_type),
+            "shoulder_lift": (0x02, 0x12, args.damiao_motor_type),
+            "elbow_flex":    (0x03, 0x13, args.damiao_motor_type),
+            "wrist_flex":    (0x04, 0x14, args.damiao_motor_type),
+            "wrist_yaw":     (0x05, 0x15, args.damiao_motor_type),
+            "wrist_roll":    (0x06, 0x16, args.damiao_motor_type),
+            "gripper":       (0x07, 0x17, args.damiao_motor_type),
+        }
+    else:  # so-arm-5dof
+        motor_cfg = {
+            "shoulder_pan":  (0x01, 0x11, args.damiao_motor_type),
+            "shoulder_lift": (0x02, 0x12, args.damiao_motor_type),
+            "elbow_flex":    (0x03, 0x13, args.damiao_motor_type),
+            "wrist_flex":    (0x04, 0x14, args.damiao_motor_type),
+            "wrist_roll":    (0x05, 0x15, args.damiao_motor_type),
+            "gripper":       (0x06, 0x16, args.damiao_motor_type),
+        }
+    bi_cfg = BiOpenArmLeaderConfig(
+        left_arm_config=OpenArmLeaderConfigBase(
+            port=args.left_can,
+            use_can_fd=args.can_fd,
+            motor_config=motor_cfg,
+        ),
+        right_arm_config=OpenArmLeaderConfigBase(
+            port=args.right_can,
+            use_can_fd=args.can_fd,
+            motor_config=motor_cfg,
+        ),
+        id=args.leader_id,
+    )
+    leader = BiOpenArmLeader(bi_cfg)
+    print(f"Leader type: damiao | left={args.left_can} right={args.right_can} motor={args.damiao_motor_type}")
+else:
+    bi_cfg = BiSOLeaderConfig(
+        left_arm_config=SOLeaderConfig(
+            port="/dev/am_arm_leader_left",
+            arm_profile=args.arm_profile,
+        ),
+        right_arm_config=SOLeaderConfig(
+            port="/dev/am_arm_leader_right",
+            arm_profile=args.arm_profile,
+        ),
+        id=args.leader_id,
+    )
+    leader = BiSOLeader(bi_cfg)
+    print(f"Leader type: feetech | arm_profile={args.arm_profile}")
 keyboard_config = KeyboardTeleopConfig(id="my_laptop_keyboard")
 keyboard = KeyboardTeleop(keyboard_config)
 robot = LeKiwiClient(robot_config)
