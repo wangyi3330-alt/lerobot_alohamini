@@ -16,7 +16,7 @@
 
 import logging
 import time
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
 from lerobot.motors import Motor, MotorCalibration, MotorNormMode
 from lerobot.motors.feetech import (
@@ -26,6 +26,7 @@ from lerobot.motors.feetech import (
 from lerobot.utils.decorators import check_if_already_connected, check_if_not_connected
 
 from ..teleoperator import Teleoperator
+from ..utils import TeleopEvents
 from .config_so_leader import SOLeaderTeleopConfig
 
 logger = logging.getLogger(__name__)
@@ -100,7 +101,6 @@ class SOLeader(Teleoperator):
 
     def calibrate(self) -> None:
         if self.calibration:
-            # Calibration file exists, ask user whether to use it or run new calibration
             user_input = input(
                 f"Press ENTER to use provided calibration file associated with the id {self.id}, or type 'c' and press ENTER to run calibration: "
             )
@@ -171,16 +171,45 @@ class SOLeader(Teleoperator):
             action = {f"{motor}.pos": float(val) for motor, val in raw_positions.items()}
         dt_ms = (time.perf_counter() - start) * 1e3
         logger.debug(f"{self} read action: {dt_ms:.1f}ms")
+        if self.config.invert_gripper and "gripper.pos" in action:
+            action["gripper.pos"] = 100.0 - action["gripper.pos"]
         return action
 
     def send_feedback(self, feedback: dict[str, float]) -> None:
-        # TODO: Implement force feedback
         raise NotImplementedError
 
     @check_if_not_connected
     def disconnect(self) -> None:
         self.bus.disconnect()
         logger.info(f"{self} disconnected.")
+
+    def get_teleop_events(self) -> dict[str, Any]:
+        """Read keyboard input (requires Enter). Keys: p=success, q=fail, r=rerecord."""
+        import select
+        import sys
+
+        events = {
+            TeleopEvents.IS_INTERVENTION: True,
+            TeleopEvents.TERMINATE_EPISODE: False,
+            TeleopEvents.SUCCESS: False,
+            TeleopEvents.RERECORD_EPISODE: False,
+        }
+
+        if not sys.stdin.isatty():
+            return events
+
+        if select.select([sys.stdin], [], [], 0)[0]:
+            line = sys.stdin.readline().strip().lower()
+            if line == "p":
+                events[TeleopEvents.SUCCESS] = True
+                events[TeleopEvents.TERMINATE_EPISODE] = True
+            elif line == "q":
+                events[TeleopEvents.TERMINATE_EPISODE] = True
+            elif line == "r":
+                events[TeleopEvents.RERECORD_EPISODE] = True
+                events[TeleopEvents.TERMINATE_EPISODE] = True
+
+        return events
 
 
 SO100Leader: TypeAlias = SOLeader

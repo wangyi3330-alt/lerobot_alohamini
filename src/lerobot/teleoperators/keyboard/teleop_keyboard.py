@@ -224,7 +224,7 @@ class KeyboardEndEffectorTeleop(KeyboardTeleop):
 
         Keyboard mappings:
         - Any movement keys pressed = intervention active
-        - 's' key = success (terminate episode successfully)
+        - 'p' key = success (terminate episode successfully)
         - 'r' key = rerecord episode (terminate and rerecord)
         - 'q' key = quit episode (terminate without success)
 
@@ -264,7 +264,7 @@ class KeyboardEndEffectorTeleop(KeyboardTeleop):
         # Process any pending misc keys
         while not self.misc_keys_queue.empty():
             key = self.misc_keys_queue.get_nowait()
-            if key == "s":
+            if key == "p":
                 success = True
             elif key == "r":
                 terminate_episode = True

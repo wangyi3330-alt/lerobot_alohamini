@@ -17,6 +17,7 @@
 import logging
 import time
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 import gymnasium as gym
@@ -151,7 +152,6 @@ class RobotEnv(gym.Env):
         self.current_step = 0
         self.episode_data = None
 
-        self._joint_names = [f"{key}.pos" for key in self.robot.bus.motors]
         self._image_keys = self.robot.cameras.keys()
 
         self.reset_pose = reset_pose
@@ -159,7 +159,8 @@ class RobotEnv(gym.Env):
 
         self.use_gripper = use_gripper
 
-        self._joint_names = list(self.robot.bus.motors.keys())
+        # Derive joint names from robot.action_features (works for all robot types)
+        self._joint_names = list(self.robot.action_features.keys())
         self._raw_joint_positions = None
 
         self._setup_spaces()
@@ -167,12 +168,12 @@ class RobotEnv(gym.Env):
     def _get_observation(self) -> RobotObservation:
         """Get current robot observation including joint positions and camera images."""
         obs_dict = self.robot.get_observation()
-        raw_joint_joint_position = {f"{name}.pos": obs_dict[f"{name}.pos"] for name in self._joint_names}
-        joint_positions = np.array([raw_joint_joint_position[f"{name}.pos"] for name in self._joint_names])
+        raw_joint_positions = {key: obs_dict[key] for key in self._joint_names if key in obs_dict}
+        joint_positions = np.array([raw_joint_positions[key] for key in self._joint_names if key in raw_joint_positions])
 
         images = {key: obs_dict[key] for key in self._image_keys}
 
-        return {"agent_pos": joint_positions, "pixels": images, **raw_joint_joint_position}
+        return {"agent_pos": joint_positions, "pixels": images, **raw_joint_positions}
 
     def _setup_spaces(self) -> None:
         """Configure observation and action spaces based on robot capabilities."""
@@ -202,15 +203,10 @@ class RobotEnv(gym.Env):
         self.observation_space = gym.spaces.Dict(observation_spaces)
 
         # Define the action space for joint positions along with setting an intervention flag.
-        action_dim = 3
+        action_dim = len(self._joint_names)
         bounds = {}
         bounds["min"] = -np.ones(action_dim)
         bounds["max"] = np.ones(action_dim)
-
-        if self.use_gripper:
-            action_dim += 1
-            bounds["min"] = np.concatenate([bounds["min"], [0]])
-            bounds["max"] = np.concatenate([bounds["max"], [2]])
 
         self.action_space = gym.spaces.Box(
             low=bounds["min"],
@@ -247,18 +243,18 @@ class RobotEnv(gym.Env):
         self.current_step = 0
         self.episode_data = None
         obs = self._get_observation()
-        self._raw_joint_positions = {f"{key}.pos": obs[f"{key}.pos"] for key in self._joint_names}
+        self._raw_joint_positions = {key: obs[key] for key in self._joint_names if key in obs}
         return obs, {TeleopEvents.IS_INTERVENTION: False}
 
     def step(self, action) -> tuple[RobotObservation, float, bool, bool, dict[str, Any]]:
         """Execute one environment step with given action."""
-        joint_targets_dict = {f"{key}.pos": action[i] for i, key in enumerate(self.robot.bus.motors.keys())}
+        joint_targets_dict = {key: action[i] for i, key in enumerate(self._joint_names)}
 
         self.robot.send_action(joint_targets_dict)
 
         obs = self._get_observation()
 
-        self._raw_joint_positions = {f"{key}.pos": obs[f"{key}.pos"] for key in self._joint_names}
+        self._raw_joint_positions = {key: obs[key] for key in self._joint_names if key in obs}
 
         if self.display_cameras:
             self.render()
@@ -585,11 +581,14 @@ def control_loop(
     """
     dt = 1.0 / cfg.env.fps
 
-    print(f"Starting control loop at {cfg.env.fps} FPS")
-    print("Controls:")
-    print("- Use gamepad/teleop device for intervention")
-    print("- When not intervening, robot will stay still")
-    print("- Press Ctrl+C to exit")
+    print("\n" + "-" * 40)
+    print(f"  [采集模式]  fps={cfg.env.fps}  共{cfg.dataset.num_episodes_to_record}组")
+    print("-" * 40)
+    print("  p       -> 成功 (保存本组)")
+    print("  q       -> 失败 (保存本组)")
+    print("  r       -> 重录 (丢弃本组)")
+    print("  Ctrl+C  -> 强制退出")
+    print("-" * 40 + "\n")
 
     # Reset environment and processors
     obs, info = env.reset()
@@ -609,8 +608,13 @@ def control_loop(
     dataset = None
     if cfg.mode == "record":
         action_features = teleop_device.action_features
+        action_keys = list(action_features.keys())
         features = {
-            ACTION: action_features,
+            ACTION: {
+                "dtype": "float32",
+                "shape": (len(action_keys),),
+                "names": {"motors": action_keys},
+            },
             REWARD: {"dtype": "float32", "shape": (1,), "names": None},
             DONE: {"dtype": "bool", "shape": (1,), "names": None},
         }
@@ -635,11 +639,16 @@ def control_loop(
                     "names": ["channels", "height", "width"],
                 }
 
+        # Append timestamp to root to avoid conflicts
+        timestamp = datetime.now().strftime("%m%d%H%M")
+        dataset_root = f"{cfg.dataset.root}_{timestamp}" if cfg.dataset.root else None
+        print(f"数据保存路径: {dataset_root}")
+
         # Create dataset
         dataset = LeRobotDataset.create(
             cfg.dataset.repo_id,
             cfg.env.fps,
-            root=cfg.dataset.root,
+            root=dataset_root,
             use_videos=True,
             image_writer_threads=4,
             image_writer_processes=0,
@@ -650,13 +659,18 @@ def control_loop(
     episode_step = 0
     episode_start_time = time.perf_counter()
 
-    while episode_idx < cfg.dataset.num_episodes_to_record:
+    total_episodes = cfg.dataset.num_episodes_to_record
+    print(f">>> 准备开始第 {episode_idx + 1}/{total_episodes} 组采集 <<<")
+
+    while episode_idx < total_episodes:
         step_start_time = time.perf_counter()
 
-        # Create a neutral action (no movement)
-        neutral_action = torch.tensor([0.0, 0.0, 0.0], dtype=torch.float32)
-        if use_gripper:
-            neutral_action = torch.cat([neutral_action, torch.tensor([1.0])])  # Gripper stay
+        # Create a neutral action using current joint positions (no movement)
+        raw_positions = env.unwrapped._raw_joint_positions
+        if raw_positions:
+            neutral_action = torch.tensor(list(raw_positions.values()), dtype=torch.float32)
+        else:
+            neutral_action = torch.zeros(len(env.unwrapped._joint_names), dtype=torch.float32)
 
         # Use the new step function
         transition = step_env_and_process_transition(
@@ -698,31 +712,47 @@ def control_loop(
         # Handle episode termination
         if terminated or truncated:
             episode_time = time.perf_counter() - episode_start_time
-            logging.info(
-                f"Episode ended after {episode_step} steps in {episode_time:.1f}s with reward {transition[TransitionKey.REWARD]}"
-            )
+            is_success = transition[TransitionKey.INFO].get(TeleopEvents.SUCCESS, False)
+            is_rerecord = transition[TransitionKey.INFO].get(TeleopEvents.RERECORD_EPISODE, False)
+
+            finished_steps = episode_step
             episode_step = 0
             episode_idx += 1
 
             if dataset is not None:
-                if transition[TransitionKey.INFO].get(TeleopEvents.RERECORD_EPISODE, False):
-                    logging.info(f"Re-recording episode {episode_idx}")
-                    dataset.clear_episode_buffer()
+                if is_rerecord:
                     episode_idx -= 1
+                    print(f"\n[重录] 第 {episode_idx + 1}/{total_episodes} 组已丢弃，准备重新采集")
+                    dataset.clear_episode_buffer()
                 else:
-                    logging.info(f"Saving episode {episode_idx}")
+                    result_tag = "成功 ✓" if is_success else "失败 ✗"
+                    print(f"\n[{result_tag}] 第 {episode_idx}/{total_episodes} 组结束 | {finished_steps} 帧 | {episode_time:.1f}s")
                     dataset.save_episode()
+                    if episode_idx < total_episodes:
+                        print(f">>> 准备开始第 {episode_idx + 1}/{total_episodes} 组采集 <<<")
+                    else:
+                        print(f"\n{'='*50}")
+                        print(f"  全部 {total_episodes} 组采集完成！")
+                        print(f"{'='*50}")
+            else:
+                result_tag = "成功" if is_success else ("重录" if is_rerecord else "结束")
+                print(f"\n[{result_tag}] 第 {episode_idx}/{total_episodes} 组 | {episode_time:.1f}s")
 
             # Reset for new episode
             obs, info = env.reset()
             env_processor.reset()
             action_processor.reset()
+            episode_start_time = time.perf_counter()
 
             transition = create_transition(observation=obs, info=info)
             transition = env_processor(transition)
 
+            if episode_idx < total_episodes:
+                print(f"\n>>> 开始第 {episode_idx + 1}/{total_episodes} 组采集 <<<\n")
+
         # Maintain fps timing
-        precise_sleep(max(dt - (time.perf_counter() - step_start_time), 0.0))
+        elapsed = time.perf_counter() - step_start_time
+        precise_sleep(max(dt - elapsed, 0.0))
 
     if dataset is not None and cfg.dataset.push_to_hub:
         logging.info("Pushing dataset to hub")

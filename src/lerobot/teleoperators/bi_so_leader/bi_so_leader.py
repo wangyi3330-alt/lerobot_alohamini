@@ -45,6 +45,7 @@ class BiSOLeader(Teleoperator):
             port=config.left_arm_config.port,
             arm_profile=config.left_arm_config.arm_profile,
             use_degrees=config.left_arm_config.use_degrees,
+            invert_gripper=config.left_arm_config.invert_gripper,
         )
 
         right_arm_config = SOLeaderTeleopConfig(
@@ -119,3 +120,6 @@ class BiSOLeader(Teleoperator):
     def disconnect(self) -> None:
         self.left_arm.disconnect()
         self.right_arm.disconnect()
+
+    def get_teleop_events(self) -> dict:
+        return self.left_arm.get_teleop_events()

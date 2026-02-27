@@ -252,6 +252,16 @@ class HILSerlRobotEnvConfig(EnvConfig):
 
     name: str = "real_robot"
 
+    def get_policy_features(self, policy_cfg) -> None:
+        """Populate features and features_map from policy input/output features."""
+        all_features = {}
+        if policy_cfg.output_features:
+            all_features.update(policy_cfg.output_features)
+        if policy_cfg.input_features:
+            all_features.update(policy_cfg.input_features)
+        self.features = all_features
+        self.features_map = {k: k for k in all_features}
+
     @property
     def gym_kwargs(self) -> dict:
         return {}

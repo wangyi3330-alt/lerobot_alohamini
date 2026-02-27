@@ -95,7 +95,7 @@ class DamiaoMotorsBus(MotorsBusBase):
         motors: dict[str, Motor],
         calibration: dict[str, MotorCalibration] | None = None,
         can_interface: str = "auto",
-        use_can_fd: bool = True,
+        use_can_fd: bool = False,
         bitrate: int = 1000000,
         data_bitrate: int | None = 5000000,
     ):

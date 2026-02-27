@@ -36,11 +36,11 @@ parser.add_argument(
 # Damiao-specific options (only used when --leader_type damiao)
 parser.add_argument("--left_can", type=str, default="can0", help="CAN interface for left arm (damiao only)")
 parser.add_argument("--right_can", type=str, default="can1", help="CAN interface for right arm (damiao only)")
-parser.add_argument("--can_fd", action="store_true", default=True, help="Use CAN FD (damiao only)")
+parser.add_argument("--can_fd", action="store_true", default=False, help="Use CAN FD (damiao only)")
 parser.add_argument(
     "--damiao_motor_type",
     type=str,
-    default="dm4310",
+    default="dm4340",
     choices=["dm4310", "dm4340", "dm8009"],
     help="Damiao motor model (damiao only)",
 )

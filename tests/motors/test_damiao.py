@@ -15,11 +15,11 @@ from lerobot.motors.damiao import DamiaoMotorsBus
 def test_damiao_motor():
     motors = {
         "joint_3": Motor(
-            id=0x03,
+            id=0x01,
             model="damiao",
             norm_mode="degrees",
-            motor_type_str="dm4310",
-            recv_id=0x13,
+            motor_type_str="dm4340",
+            recv_id=0x11,
         ),
     }
 

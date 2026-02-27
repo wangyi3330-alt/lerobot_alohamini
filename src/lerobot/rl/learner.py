@@ -306,6 +306,10 @@ def add_actor_information_and_train(
 
     logging.info("Initializing policy")
 
+    # Populate env features from policy config so env_to_policy_features works correctly
+    if hasattr(cfg.env, "get_policy_features"):
+        cfg.env.get_policy_features(cfg.policy)
+
     policy: SACPolicy = make_policy(
         cfg=cfg.policy,
         env_cfg=cfg.env,

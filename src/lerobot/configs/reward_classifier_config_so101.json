@@ -1,0 +1,40 @@
+{
+  "policy": {
+    "type": "reward_classifier",
+    "model_name": "helper2424/resnet10",
+    "model_type": "cnn",
+    "num_cameras": 2,
+    "num_classes": 2,
+    "hidden_dim": 256,
+    "latent_dim": 256,
+    "dropout_rate": 0.1,
+    "learning_rate": 1e-4,
+    "weight_decay": 0.01,
+    "device": "cuda",
+    "input_features": {
+      "observation.images.cam_left": {
+        "type": "VISUAL",
+        "shape": [3, 128, 128]
+      },
+      "observation.images.cam_top": {
+        "type": "VISUAL",
+        "shape": [3, 128, 128]
+      }
+    }
+  },
+  "dataset": {
+    "repo_id": null,
+    "root": "data/so101_demos"
+  },
+  "batch_size": 32,
+  "steps": 5000,
+  "eval_freq": 500,
+  "log_freq": 50,
+  "save_freq": 1000,
+  "output_dir": "outputs/so101_reward_classifier",
+  "seed": 42,
+  "wandb": {
+    "enable": false,
+    "project": "so101_hilserl"
+  }
+}

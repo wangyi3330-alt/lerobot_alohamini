@@ -205,17 +205,7 @@ class SOFollower(Robot):
         try:
             currents = self.bus.sync_read("Present_Current")
             currents_ma = {motor: val * 6.5 for motor, val in currents.items()}
-            now = time.perf_counter()
-            if now - self._last_current_print_ts >= 0.5:
-                self._last_current_print_ts = now
-                motors = list(self.bus.motors.keys())
-                lines = ["Motor current (mA):"]
-                lines += [
-                    f"  {motor:<12} {currents_ma[motor]:7.1f}"
-                    for motor in motors
-                    if motor in currents_ma
-                ]
-                print("\n".join(lines))
+            pass
         except Exception as exc:
             logger.debug(f"{self} read current failed: {exc}")
 
