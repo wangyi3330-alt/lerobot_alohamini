@@ -6,37 +6,37 @@
     "robot": {
       "type": "bi_so_follower",
       "left_arm_config": {
-        "port": "/dev/ttyACM0",
+        "port": "/dev/am_arm_follower_left",
         "id": "left_follower",
         "arm_profile": "so-arm-5dof",
         "use_degrees": true,
         "cameras": {
           "cam_left": {
             "type": "opencv",
-            "index_or_path": 0,
-            "fps": 30,
+            "index_or_path": "/dev/am_camera_wrist_left",
+            "fps": 15,
             "width": 640,
             "height": 480
           },
           "cam_top": {
             "type": "opencv",
-            "index_or_path": 4,
-            "fps": 30,
+            "index_or_path": "/dev/am_camera_hand_top",
+            "fps": 15,
             "width": 640,
             "height": 480
           }
         }
       },
       "right_arm_config": {
-        "port": "/dev/ttyACM2",
+        "port": "/dev/am_arm_follower_right",
         "id": "right_follower",
         "arm_profile": "so-arm-5dof",
         "use_degrees": true,
         "cameras": {
           "cam_right": {
             "type": "opencv",
-            "index_or_path": 2,
-            "fps": 30,
+            "index_or_path": "/dev/am_camera_wrist_right",
+            "fps": 15,
             "width": 640,
             "height": 480
           }
@@ -46,12 +46,12 @@
     "teleop": {
       "type": "bi_so_leader",
       "left_arm_config": {
-        "port": "/dev/ttyACM1",
+        "port": "/dev/am_arm_leader_left",
         "use_degrees": true,
         "arm_profile": "so-arm-5dof"
       },
       "right_arm_config": {
-        "port": "/dev/ttyACM3",
+        "port": "/dev/am_arm_leader_right",
         "use_degrees": true,
         "arm_profile": "so-arm-5dof"
       }
@@ -65,7 +65,10 @@
       },
       "image_preprocessing": {
         "crop_params_dict": {},
-        "resize_size": [128, 128]
+        "resize_size": [
+          128,
+          128
+        ]
       },
       "gripper": {
         "use_gripper": true,

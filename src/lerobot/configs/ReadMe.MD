@@ -51,3 +51,12 @@ python -m lerobot.rl.learner --config_path src/lerobot/configs/train_config_hils
 ### 演示者
 python -m lerobot.rl.actor  --config_path src/lerobot/configs/train_config_hilserl_so101.json
 
+
+# 映射
+## 从臂（右）/dev/am_arm_follower_right
+## 从臂（左）/dev/am_arm_follower_left
+## 主臂（右）/dev/am_arm_leader_right
+## 主臂（左）/dev/am_arm_leader_left
+## 从臂摄像头（右）/dev/am_camera_wrist_right
+## 从臂摄像头（左）/dev/am_camera_wrist_left
+## 摄像头（头）/dev/am_camera_hand_top

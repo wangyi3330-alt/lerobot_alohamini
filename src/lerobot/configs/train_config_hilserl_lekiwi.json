@@ -6,25 +6,41 @@
     "input_features": {
       "observation.state": {
         "type": "STATE",
-        "shape": [12]
+        "shape": [
+          12
+        ]
       },
       "observation.images.cam_left": {
         "type": "VISUAL",
-        "shape": [3, 128, 128]
+        "shape": [
+          3,
+          128,
+          128
+        ]
       },
       "observation.images.cam_right": {
         "type": "VISUAL",
-        "shape": [3, 128, 128]
+        "shape": [
+          3,
+          128,
+          128
+        ]
       },
       "observation.images.cam_top": {
         "type": "VISUAL",
-        "shape": [3, 128, 128]
+        "shape": [
+          3,
+          128,
+          128
+        ]
       }
     },
     "output_features": {
       "action": {
         "type": "ACTION",
-        "shape": [12]
+        "shape": [
+          12
+        ]
       }
     },
     "online_step_before_learning": 200,
@@ -55,21 +71,21 @@
         "cam_left": {
           "type": "opencv",
           "index_or_path": "/dev/am_camera_wrist_left",
-          "fps": 30,
+          "fps": 15,
           "width": 640,
           "height": 480
         },
         "cam_right": {
           "type": "opencv",
           "index_or_path": "/dev/am_camera_wrist_right",
-          "fps": 30,
+          "fps": 15,
           "width": 640,
           "height": 480
         },
         "cam_top": {
           "type": "opencv",
           "index_or_path": "/dev/am_camera_head_top",
-          "fps": 30,
+          "fps": 15,
           "width": 640,
           "height": 480
         }
@@ -78,12 +94,12 @@
     "teleop": {
       "type": "bi_so_leader",
       "left_arm_config": {
-        "port": "/dev/ttyACM1",
+        "port": "/dev/am_arm_leader_left",
         "use_degrees": true,
         "arm_profile": "so-arm-5dof"
       },
       "right_arm_config": {
-        "port": "/dev/ttyACM3",
+        "port": "/dev/am_arm_leader_right",
         "use_degrees": true,
         "arm_profile": "so-arm-5dof"
       }
@@ -97,11 +113,29 @@
       },
       "image_preprocessing": {
         "crop_params_dict": {
-          "observation.images.cam_left": [0, 0, 480, 640],
-          "observation.images.cam_right": [0, 0, 480, 640],
-          "observation.images.cam_top": [0, 0, 480, 640]
+          "observation.images.cam_left": [
+            0,
+            0,
+            480,
+            640
+          ],
+          "observation.images.cam_right": [
+            0,
+            0,
+            480,
+            640
+          ],
+          "observation.images.cam_top": [
+            0,
+            0,
+            480,
+            640
+          ]
         },
-        "resize_size": [128, 128]
+        "resize_size": [
+          128,
+          128
+        ]
       },
       "gripper": {
         "use_gripper": true,

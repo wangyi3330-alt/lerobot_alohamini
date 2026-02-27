@@ -36,12 +36,12 @@
     "teleop": {
       "type": "bi_so_leader",
       "left_arm_config": {
-        "port": "/dev/ttyACM1",
+        "port": "/dev/am_arm_leader_left",
         "use_degrees": true,
         "arm_profile": "so-arm-5dof"
       },
       "right_arm_config": {
-        "port": "/dev/ttyACM3",
+        "port": "/dev/am_arm_leader_right",
         "use_degrees": true,
         "arm_profile": "so-arm-5dof"
       }
@@ -55,7 +55,10 @@
       },
       "image_preprocessing": {
         "crop_params_dict": {},
-        "resize_size": [128, 128]
+        "resize_size": [
+          128,
+          128
+        ]
       },
       "gripper": {
         "use_gripper": true,
