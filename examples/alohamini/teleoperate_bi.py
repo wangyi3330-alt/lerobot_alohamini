@@ -151,10 +151,11 @@ if not robot.is_connected or not leader.is_connected or not keyboard.is_connecte
     print("⚠️ Warning: Some devices are not connected! Still running for debug.")
 
 # Main loop
+gamepad_keys = {}
 while True:
     t0 = time.perf_counter()
 
-    # Read gamepad events and inject into keyboard
+    # Read gamepad events directly
     if gamepad:
         try:
             event = gamepad.read_one()
@@ -164,24 +165,19 @@ while True:
                         gamepad_mode = 1 - gamepad_mode
                     elif event.value == 1:
                         if gamepad_mode == 0:
-                            if event.code == 115: keyboard.event_queue.put(('w', True))
-                            elif event.code == 114: keyboard.event_queue.put(('s', True))
-                            elif event.code == 165: keyboard.event_queue.put(('a', True))
-                            elif event.code == 163: keyboard.event_queue.put(('d', True))
+                            # 模式0: 底盘移动
+                            if event.code == 115: gamepad_keys['w'] = True  # backward
+                            elif event.code == 114: gamepad_keys['s'] = True  # forward
+                            elif event.code == 165: gamepad_keys['a'] = True  # rotate_left
+                            elif event.code == 163: gamepad_keys['d'] = True  # rotate_right
                         else:
-                            if event.code == 115: keyboard.event_queue.put(('u', True))
-                            elif event.code == 114: keyboard.event_queue.put(('j', True))
-                            elif event.code == 165: keyboard.event_queue.put(('a', True))
-                            elif event.code == 163: keyboard.event_queue.put(('d', True))
+                            # 模式1: 升降 + 旋转
+                            if event.code == 115: gamepad_keys['u'] = True  # lift_up
+                            elif event.code == 114: gamepad_keys['j'] = True  # lift_down
+                            elif event.code == 165: gamepad_keys['a'] = True  # rotate_left
+                            elif event.code == 163: gamepad_keys['d'] = True  # rotate_right
                     elif event.value == 0:
-                        if event.code == 115:
-                            keyboard.event_queue.put(('w', False))
-                            keyboard.event_queue.put(('u', False))
-                        elif event.code == 114:
-                            keyboard.event_queue.put(('s', False))
-                            keyboard.event_queue.put(('j', False))
-                        elif event.code == 165: keyboard.event_queue.put(('a', False))
-                        elif event.code == 163: keyboard.event_queue.put(('d', False))
+                        gamepad_keys.clear()
                 event = gamepad.read_one()
         except:
             pass
@@ -189,9 +185,15 @@ while True:
     observation = robot.get_observation() if not NO_ROBOT else {}
     arm_actions = leader.get_action() if not NO_LEADER else {}
     arm_actions = {f"arm_{k}": v for k, v in arm_actions.items()}
-    keyboard_keys = keyboard.get_action()
-    base_action = robot._from_keyboard_to_base_action(keyboard_keys)
-    lift_action = robot._from_keyboard_to_lift_action(keyboard_keys)
+
+    # 如果有蓝牙输入，只用蓝牙；否则用键盘
+    if gamepad:
+        control_keys = gamepad_keys
+    else:
+        control_keys = keyboard.get_action()
+
+    base_action = robot._from_keyboard_to_base_action(control_keys)
+    lift_action = robot._from_keyboard_to_lift_action(control_keys)
 
     action = {**arm_actions, **base_action, **lift_action}
     log_rerun_data(observation, action)
