@@ -90,8 +90,8 @@ class LeKiwiClientConfig(RobotConfig):
     teleop_keys: dict[str, str] = field(
         default_factory=lambda: {
             # Movement
-            "forward": "w",
-            "backward": "s",
+            "forward": "s",
+            "backward": "w",
             "left": "z",
             "right": "x",
             "rotate_left": "a",

@@ -52,10 +52,16 @@ python -m lerobot.rl.learner --config_path src/lerobot/configs/train_config_hils
 ### 演示者
 python -m lerobot.rl.actor  --config_path src/lerobot/configs/train_config_hilserl_so101.json
 
-
+## 继续
+### 学习者 
+ python -m lerobot.rl.learner --config_path outputs/so101_hilserl_learner_03042115/checkpoints/last/pretrained_model/train_config.json --resume true
+### 演示者
+python -m lerobot.rl.actor  --config_path outputs/so101_hilserl_learner_03042115/checkpoints/last/pretrained_model/train_config.json --resume true
 # 映射
 ## 规则地址
 /etc/udev/rules.d/99-aloha-serial.rules
+### 查询序列号命令
+udevadm info --name=/dev/ttyACM1 | grep -i serial
 ## 从臂（右）/dev/am_arm_follower_right
 ## 从臂（左）/dev/am_arm_follower_left
 ## 主臂（右）/dev/am_arm_leader_right
@@ -63,3 +69,11 @@ python -m lerobot.rl.actor  --config_path src/lerobot/configs/train_config_hilse
 ## 从臂摄像头（右）/dev/am_camera_wrist_right
 ## 从臂摄像头（左）/dev/am_camera_wrist_left
 ## 摄像头（头）/dev/am_camera_hand_top
+### 生效
+sudo udevadm control --reload-rules && sudo udevadm trigger
+
+115 前
+114 后
+165 左
+163 右
+164 升

@@ -105,6 +105,13 @@ from .learner_service import MAX_WORKERS, SHUTDOWN_TIMEOUT, LearnerService
 
 @parser.wrap()
 def train_cli(cfg: TrainRLServerPipelineConfig):
+    from datetime import datetime
+    from pathlib import Path
+
+    # Only add timestamp if not resuming
+    if not cfg.resume:
+        cfg.output_dir = Path(f"{cfg.output_dir}_learner_{datetime.now().strftime('%m%d%H%M')}")
+
     if not use_threads(cfg):
         import torch.multiprocessing as mp
 

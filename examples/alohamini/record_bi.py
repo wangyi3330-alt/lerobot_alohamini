@@ -42,6 +42,10 @@ def main():
 
     args = parser.parse_args()
 
+    # 自动添加日期时间到数据集名称
+    timestamp = datetime.now().strftime("%m%d%H%M")
+    args.dataset = f"{args.dataset}_{timestamp}"
+
     # === Robot and teleop config ===
     robot_config = LeKiwiClientConfig(remote_ip=args.remote_ip, id=args.robot_id)
     leader_arm_config = BiSOLeaderConfig(
@@ -154,7 +158,7 @@ def main():
     keyboard.disconnect()
     listener.stop()
     dataset.finalize()
-    dataset.push_to_hub()
+    # dataset.push_to_hub()  # 禁止上传到hub
 
 
 if __name__ == "__main__":

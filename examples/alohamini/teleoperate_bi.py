@@ -1,7 +1,7 @@
 import argparse
-import inspect
-import os
 import time
+import evdev
+from evdev import ecodes
 
 from lerobot.robots.alohamini import LeKiwiClient, LeKiwiClientConfig
 from lerobot.teleoperators.keyboard.teleop_keyboard import KeyboardTeleop, KeyboardTeleopConfig
@@ -46,6 +46,21 @@ parser.add_argument(
 )
 
 args = parser.parse_args()
+
+# Gamepad setup
+gamepad = None
+gamepad_mode = 0
+try:
+    devices = [evdev.InputDevice(path) for path in evdev.list_devices()]
+    for d in devices:
+        if "magicsee r1" in d.name.lower() and "consumer control" in d.name.lower():
+            gamepad = d
+            d.set_blocking(False)
+            d.grab()
+            print(f"✓ Gamepad connected: {d.name}")
+            break
+except:
+    pass
 
 NO_ROBOT = args.no_robot
 NO_LEADER = args.no_leader
@@ -138,6 +153,38 @@ if not robot.is_connected or not leader.is_connected or not keyboard.is_connecte
 # Main loop
 while True:
     t0 = time.perf_counter()
+
+    # Read gamepad events and inject into keyboard
+    if gamepad:
+        try:
+            event = gamepad.read_one()
+            while event:
+                if event.type == ecodes.EV_KEY:
+                    if event.code == 164 and event.value == 1:
+                        gamepad_mode = 1 - gamepad_mode
+                    elif event.value == 1:
+                        if gamepad_mode == 0:
+                            if event.code == 115: keyboard.event_queue.put(('w', True))
+                            elif event.code == 114: keyboard.event_queue.put(('s', True))
+                            elif event.code == 165: keyboard.event_queue.put(('a', True))
+                            elif event.code == 163: keyboard.event_queue.put(('d', True))
+                        else:
+                            if event.code == 115: keyboard.event_queue.put(('u', True))
+                            elif event.code == 114: keyboard.event_queue.put(('j', True))
+                            elif event.code == 165: keyboard.event_queue.put(('a', True))
+                            elif event.code == 163: keyboard.event_queue.put(('d', True))
+                    elif event.value == 0:
+                        if event.code == 115:
+                            keyboard.event_queue.put(('w', False))
+                            keyboard.event_queue.put(('u', False))
+                        elif event.code == 114:
+                            keyboard.event_queue.put(('s', False))
+                            keyboard.event_queue.put(('j', False))
+                        elif event.code == 165: keyboard.event_queue.put(('a', False))
+                        elif event.code == 163: keyboard.event_queue.put(('d', False))
+                event = gamepad.read_one()
+        except:
+            pass
 
     observation = robot.get_observation() if not NO_ROBOT else {}
     arm_actions = leader.get_action() if not NO_LEADER else {}

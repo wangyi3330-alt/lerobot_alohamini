@@ -235,6 +235,10 @@ class SOFollower(Robot):
 
         goal_pos = {key.removesuffix(".pos"): val for key, val in action.items() if key.endswith(".pos")}
 
+        # Invert left arm gripper
+        if "left" in self.config.port and "gripper" in goal_pos:
+            goal_pos["gripper"] = 100 - goal_pos["gripper"]
+
         # Cap goal position when too far away from present position.
         # /!\ Slower fps expected due to reading from the follower.
         if self.config.max_relative_target is not None:

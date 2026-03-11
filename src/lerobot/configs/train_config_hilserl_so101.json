@@ -54,7 +54,7 @@
   "env": {
     "type": "gym_manipulator",
     "name": "real_robot",
-    "fps": 15,
+    "fps": 50,
     "robot": {
       "type": "so101_follower",
       "port": "/dev/am_arm_follower_left",
@@ -64,11 +64,10 @@
       "cameras": {
         "cam_left": {
           "type": "opencv",
-          "index_or_path": 2,
+          "index_or_path": 8,
           "fps": 15,
           "width": 640,
-          "height": 480,
-          "fourcc": "MJPG"
+          "height": 480
         },
         "cam_top": {
           "type": "intelrealsense",
@@ -124,6 +123,7 @@
     }
   },
   "output_dir": "outputs/so101_hilserl",
+  "save_freq": 500,
   "seed": 42,
   "wandb": {
     "enable": false,

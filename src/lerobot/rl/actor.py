@@ -102,6 +102,13 @@ from .gym_manipulator import (
 
 @parser.wrap()
 def actor_cli(cfg: TrainRLServerPipelineConfig):
+    from datetime import datetime
+    from pathlib import Path
+
+    # Only add timestamp if not resuming
+    if not cfg.resume:
+        cfg.output_dir = Path(f"{cfg.output_dir}_actor_{datetime.now().strftime('%m%d%H%M')}")
+
     cfg.validate()
     display_pid = False
     if not use_threads(cfg):
@@ -287,10 +294,15 @@ def act_with_policy(
         }
 
         # Time policy inference and check if it meets FPS requirement
+        t0 = time.perf_counter()
         with policy_timer:
             # Extract observation from transition for policy
             action = policy.select_action(batch=observation)
         policy_fps = policy_timer.fps_last
+        t1 = time.perf_counter()
+
+        if interaction_step % 100 == 0:
+            logging.info(f"[ACTOR] Policy action shape: {action.shape}, values: {action}")
 
         log_policy_frequency_issue(policy_fps=policy_fps, cfg=cfg, interaction_step=interaction_step)
 
@@ -302,6 +314,10 @@ def act_with_policy(
             env_processor=env_processor,
             action_processor=action_processor,
         )
+        t2 = time.perf_counter()
+
+        if interaction_step % 100 == 0:
+            logging.info(f"[ACTOR] Policy: {(t1-t0)*1000:.1f}ms, Env step: {(t2-t1)*1000:.1f}ms, Total: {(t2-start_time)*1000:.1f}ms")
 
         # Extract values from processed transition
         next_observation = {

@@ -254,10 +254,13 @@ class LeKiwi(Robot):
         """
         # If a calibration file already exists: load it and write back, filtering for each bus separately
         if self.calibration:
-            user_input = input(
-                f"Press ENTER to use provided calibration file associated with the id {self.id}, "
-                f"or type 'c' and press ENTER to run calibration: "
-            )
+            if os.environ.get('SKIP_CALIBRATION_PROMPT'):
+                user_input = ''
+            else:
+                user_input = input(
+                    f"Press ENTER to use provided calibration file associated with the id {self.id}, "
+                    f"or type 'c' and press ENTER to run calibration: "
+                )
             if user_input.strip().lower() != "c":
                 logger.info("Writing existing calibration to both buses (trim per-bus caches)")
 
@@ -628,6 +631,9 @@ class LeKiwi(Robot):
         #print(f"[{filename}:{lineno}]Sending left_pos:{left_pos}, right_pos:{right_pos}, base_wheel_goal_vel:{base_wheel_goal_vel}")  # debug
     
         if left_pos:
+            # Invert left arm gripper
+            if "arm_left_gripper.pos" in left_pos:
+                left_pos["arm_left_gripper.pos"] = 100 - left_pos["arm_left_gripper.pos"]
             self.left_bus.sync_write("Goal_Position", {k.replace(".pos", ""): v for k, v in left_pos.items()})
         if self.right_bus and right_pos:
             self.right_bus.sync_write("Goal_Position", {k.replace(".pos", ""): v for k, v in right_pos.items()})

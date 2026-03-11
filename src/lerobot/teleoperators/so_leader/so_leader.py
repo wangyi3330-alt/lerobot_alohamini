@@ -70,6 +70,9 @@ class SOLeader(Teleoperator):
             motors=motors,
             calibration=self.calibration,
         )
+        self._last_pos = None
+        self._intervention_threshold = 2.0
+        self._current_pos = None
 
     @property
     def action_features(self) -> dict[str, type]:
@@ -188,8 +191,16 @@ class SOLeader(Teleoperator):
         import select
         import sys
 
+        # Detect intervention by checking if leader arm moved
+        is_intervention = False
+        current_pos = self.bus.sync_read("Present_Position")
+        if self._last_pos is not None:
+            max_delta = max(abs(current_pos[m] - self._last_pos[m]) for m in current_pos)
+            is_intervention = max_delta > self._intervention_threshold
+        self._last_pos = current_pos
+
         events = {
-            TeleopEvents.IS_INTERVENTION: True,
+            TeleopEvents.IS_INTERVENTION: is_intervention,
             TeleopEvents.TERMINATE_EPISODE: False,
             TeleopEvents.SUCCESS: False,
             TeleopEvents.RERECORD_EPISODE: False,
