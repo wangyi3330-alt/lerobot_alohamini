@@ -176,6 +176,11 @@ class SOLeader(Teleoperator):
         logger.debug(f"{self} read action: {dt_ms:.1f}ms")
         if self.config.invert_gripper and "gripper.pos" in action:
             action["gripper.pos"] = 100.0 - action["gripper.pos"]
+        # Invert shoulder_lift and elbow_flex
+        if "shoulder_lift.pos" in action:
+            action["shoulder_lift.pos"] = -action["shoulder_lift.pos"]
+        if "elbow_flex.pos" in action:
+            action["elbow_flex.pos"] = -action["elbow_flex.pos"]
         return action
 
     def send_feedback(self, feedback: dict[str, float]) -> None:

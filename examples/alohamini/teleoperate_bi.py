@@ -48,6 +48,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 # Gamepad setup
+#TODO 改成识别mac地址的
 gamepad = None
 gamepad_mode = 0
 try:
